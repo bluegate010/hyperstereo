@@ -1,0 +1,14 @@
+{
+  "name": "fault",
+  "heading_deg": 180,
+  "baseline_m": 60,
+  "duration_s": 300,
+  "events": [
+    {"t": 1,   "cmd": {"start": true}},
+    {"t": 80,  "cmd": {"rotate_deg": 120}},
+    {"t": 86,  "fault": {"vehicle": "R", "healthy": false}},
+    {"t": 100, "fault": {"vehicle": "R", "healthy": true}},
+    {"t": 105, "cmd": {"resume": true}},
+    {"t": 170, "cmd": {"recover": true}}
+  ]
+}

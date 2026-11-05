@@ -1,0 +1,17 @@
+{
+  "name": "tour",
+  "heading_deg": 0,
+  "baseline_m": 50,
+  "duration_s": 400,
+  "events": [
+    {"t": 1,   "cmd": {"start": true}},
+    {"t": 70,  "cmd": {"v_forward": 4.0}},
+    {"t": 85,  "cmd": {"v_forward": 0.0}},
+    {"t": 95,  "cmd": {"rotate_deg": 90}},
+    {"t": 135, "cmd": {"baseline_m": 53}},
+    {"t": 150, "cmd": {"baseline_m": 100}},
+    {"t": 190, "cmd": {"rotate_deg": -180}},
+    {"t": 245, "cmd": {"rotate_deg": 45, "baseline_m": 75}},
+    {"t": 285, "cmd": {"recover": true}}
+  ]
+}

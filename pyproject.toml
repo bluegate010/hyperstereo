@@ -1,0 +1,12 @@
+[project]
+name = "hyperstereo"
+version = "0.1.0"
+description = "Two-drone hyperstereo FPV: Phase 0 simulation"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "opencv-python-headless", "pymavlink"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
