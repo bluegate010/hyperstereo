@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hyperstereo Live</title>
+<style>
+  :root { --hud: #ffffff; --hud-shadow: rgba(0,0,0,.85); --panel: rgba(12,16,22,.88); --accent: #7fd1ff; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+    font: 13px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--hud); }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .hud { position: absolute; top: 10px; pointer-events: none; white-space: pre;
+    text-shadow: 0 0 3px var(--hud-shadow), 0 0 6px var(--hud-shadow); }
+  .hud .mode { font-weight: 700; }
+  .bar { display: inline-block; width: 80px; height: 7px; border: 1px solid #fff; vertical-align: middle; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  #status { position: absolute; left: 50%; top: 45%; transform: translate(-50%,-50%); padding: 14px 18px;
+    background: var(--panel); border-radius: 8px; text-align: center; max-width: calc(100vw - 32px); }
+  #help { position: absolute; right: 16px; bottom: 16px; background: var(--panel); padding: 12px 14px;
+    border-radius: 8px; white-space: pre; display: none; max-width: calc(100vw - 32px); overflow: auto; }
+  #help.show { display: block; }
+  #fs { position: absolute; right: 16px; top: 12px; background: var(--panel); color: #fff; border: 1px solid #556;
+    border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; }
+  :fullscreen #fs { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud" id="hudL"></div>
+<div class="hud" id="hudR"></div>
+<div id="status">Loading terrain…</div>
+<button id="fs" title="Full screen (put this window on the headset display first)">Full screen</button>
+<div id="help">Gamepad (standard layout)          Keyboard
+  Right stick   fwd/back, left/right   W S / A D
+  Left stick Y  climb / descend        R / F
+  LT / RT       camera pitch down/up   I / K
+  LB / RB       rotate -45 / +45       Q / E
+  D-pad L / R   rotate -90 / +90       Z / C
+  D-pad U / D   baseline +5 / -5 m     Up / Down
+  Y / A         baseline +25 / -25 m   PgUp / PgDn
+  Start         launch & assemble      Enter
+  Back          recover & land         Backspace
+  X             resume after HOLD      H
+  B             toggle rectification   T
+                toggle ground mask     M
+                view: SBS/anaglyph/2D  V
+                hide / show HUD        U
+                inject fault (right)   G
+                new flight (reset)     N
+                this help              ?</div>
+<script type="module" src="/static/viewer.js"></script>
+</body>
+</html>

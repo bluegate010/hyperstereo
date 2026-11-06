@@ -18,13 +18,14 @@ stereo pipeline, and comfort metrics scored against ground truth.
 | `hyperstereo/stereo.py` | Feature rectifier, DEM-based convergence, ground mask, SBS composition, ground-truth comfort metrics |
 | `hyperstereo/runner.py` | Runs a scenario: flight, telemetry, optional SBS video, scoring |
 | `hyperstereo/sweep.py` | Comfort sweep across baseline / lens / altitude: SBS stills, ladder video, metrics table |
+| `hyperstereo/live.py` + `viewer/` | Real-time viewer: sim/SITL + controller at 50 Hz, streamed to a three.js page that renders both eyes on the GPU and reads the joystick |
 | `scenarios/*.json` | Timed pilot commands and fault injection |
 
 ## Running
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
-pip install numpy scipy opencv-python-headless pymavlink pytest
+pip install numpy scipy opencv-python-headless pymavlink aiohttp pytest
 ```
 
 ```bash
@@ -73,6 +74,46 @@ python -m hyperstereo.runner scenarios/tour.json --sitl
 Add `--render --fps 1` to render and score stereo from the SITL flight. SITL's
 wind (`SIM_WIND_*`) and GPS noise (`SIM_GPS_NOISE`) are set from the config.
 Gimbals are modelled by `GimbalModel`, driven by ArduCopter's reported body rates.
+
+## Flying live (real-time viewer)
+
+```bash
+python -m hyperstereo.live
+```
+
+Open http://localhost:8765 in Chrome, Edge or Firefox, move the window onto the
+headset display (for SBS glasses, switch them to their 3D/SBS mode), click
+**Full screen**, and press a gamepad button so the browser picks up the controller.
+Press `?` for the control map. Add `--sitl` to fly two ArduPilot SITL instances
+(start them with `scripts/start_sitl.sh 1`); `--host 0.0.0.0` serves other devices.
+
+| Gamepad (standard layout) | Keyboard | Action |
+|---|---|---|
+| Right stick | W S / A D | fly forward/back, left/right |
+| Left stick Y | R / F | climb / descend |
+| LT / RT | I / K | camera pitch down / up |
+| LB / RB | Q / E | rotate −45° / +45° |
+| D-pad ← / → | Z / C | rotate −90° / +90° |
+| D-pad ↑ / ↓ | ↑ / ↓ | baseline +5 / −5 m (live) |
+| Y / A | PgUp / PgDn | baseline +25 / −25 m (maneuver) |
+| Start / Back | Enter / Backspace | launch & assemble / recover & land |
+| X | H | resume after HOLD |
+| B | T | toggle rectification (A/B the raw misaligned pair) |
+| | M / V / U | ground mask / view SBS·anaglyph·2D / HUD |
+| | G / N | inject right-drone fault / new flight |
+
+How it works: the browser renders each eye from the drone's *true* camera pose,
+gimbal errors included. Rectification renders the right eye with the left
+camera's orientation plus about 0.03° of residual error, which matches what the
+feature + DEM pipeline achieved offline. That's mathematically the same as the
+rotation-only homography. Snapshots are interpolated (with a slerp for orientation)
+50 ms in the past, so motion stays smooth on 60–90 Hz displays. Use the anaglyph
+view with red/cyan glasses to test without a headset. Append `?lod=2` to the URL
+to halve the terrain mesh resolution on weak GPUs.
+
+Limitations: the browser path doesn't run the real feature rectifier, which needs
+camera images the server never sees. Lock comes from the controller's settle
+criteria alone, and the offline runner remains the way to validate lock.
 
 ## Scenario format
 
@@ -140,6 +181,6 @@ larger becomes a fade-out / transit / settle maneuver.
 - [x] Validate against two ArduPilot SITL instances (`--sitl`). Tour: 4 maneuvers,
       no holds, landed; stereo: 0 frames without lock, worst vertical error 0.10°, worst
       divergence 0.03°. Fault: HOLD, resume at the interrupted heading, stereo, landed.
-- [ ] Real-time interactive viewer (fly with a joystick in the headset). The CPU
-      raymarcher is offline-only; a WebGL or game-engine front end would reuse
-      `controller.py` unchanged.
+- [x] Real-time interactive viewer (`python -m hyperstereo.live`): gamepad or keyboard,
+      SBS / anaglyph / 2D output, rectification and mask toggles, sim or SITL backend.
+      Tested in headless Chromium; not yet tested with a physical gamepad or headset.
