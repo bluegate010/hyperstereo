@@ -1,6 +1,6 @@
 # Hyperstereo FPV: Phase 0 (simulation)
 
-Two drones fly in tandem 50–100 m apart, and each one feeds one eye of an FPV headset.
+Two drones fly in tandem 50–200 m apart, and each one feeds one eye of an FPV headset.
 The result is extreme parallax: the world looks 800–1600× smaller, like a model. This
 repository is the Phase 0 simulation. It covers the formation controller and stereo
 state machine, a flight and gimbal simulator, a synthetic landscape renderer, the

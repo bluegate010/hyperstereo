@@ -81,7 +81,7 @@ def test_baseline_clamped_to_configured_range():
     ctrl = make_ctrl()
     run_ideal(ctrl, lambda t: PilotInput(start=t < 0.05), 10.0)
     run_ideal(ctrl, lambda t: PilotInput(baseline_m=500.0 if t < 10.01 else None), 30.0, t0=10.0)
-    assert ctrl.formation.baseline_m == pytest.approx(100.0)
+    assert ctrl.formation.baseline_m == pytest.approx(200.0)
 
 
 def test_unhealthy_vehicle_triggers_hold_and_mono_from_healthy_drone():

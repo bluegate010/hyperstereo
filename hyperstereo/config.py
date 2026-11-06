@@ -9,7 +9,7 @@ class ControllerConfig:
     # Formation
     cruise_alt_m: float = 100.0
     baseline_min_m: float = 50.0
-    baseline_max_m: float = 100.0
+    baseline_max_m: float = 200.0         # beyond ~200 m the stereo pipeline degrades; see docs/eval-baseline-500m.md
     view_pitch_deg: float = -3.0          # gimbal pitch while in stereo
     view_pitch_limits_deg: tuple[float, float] = (-10.0, 5.0)
 

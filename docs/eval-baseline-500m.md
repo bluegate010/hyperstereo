@@ -85,6 +85,10 @@ takes a large share of flight time.
 
 ## Recommendation
 
+**Decision:** the maximum baseline is now set to **200 m** (`ControllerConfig.baseline_max_m`).
+At 200 m, expect occasional unmasked uncomfortable parallax (up to 9% of the frame) and
+divergence up to 0.28° until items 1–2 below are done.
+
 Keep **100 m** as the default maximum (the pipeline is validated there), and treat
 **150 m** as the current pipeline's safe limit. Allow up to 500 m as an opt-in landscape
 mode once these exist:
