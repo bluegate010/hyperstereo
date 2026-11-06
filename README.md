@@ -172,6 +172,8 @@ larger becomes a fade-out / transit / settle maneuver.
    at B = 50 m), but launch and recovery with the drones 10 m apart left only 8 m of
    separation. RTK still matters for the close-quarters phases.
 
+See [`docs/eval-baseline-500m.md`](docs/eval-baseline-500m.md) for what changes at baselines up to 500 m.
+
 ## Phase 0 exit checklist
 
 - [x] Formation controller with arc rotation, live and maneuvered baseline changes

@@ -1,0 +1,14 @@
+{
+  "name": "b500",
+  "heading_deg": 0,
+  "baseline_m": 50,
+  "duration_s": 800,
+  "events": [
+    {"t": 1,   "cmd": {"start": true}},
+    {"t": 70,  "cmd": {"baseline_m": 500}},
+    {"t": 180, "cmd": {"rotate_deg": 90}},
+    {"t": 280, "cmd": {"rotate_deg": -180}},
+    {"t": 430, "cmd": {"baseline_m": 100}},
+    {"t": 520, "cmd": {"recover": true}}
+  ]
+}

@@ -106,9 +106,11 @@ class Terrain:
         return (x > self.origin) & (x < hi) & (y > self.origin) & (y < hi)
 
     # ------------------------------------------------------------------ rendering
-    def raymarch(self, o: np.ndarray, d: np.ndarray, t_max: float = 12000.0,
-                 max_iter: int = 400) -> np.ndarray:
+    def raymarch(self, o: np.ndarray, d: np.ndarray, t_max: float | None = None,
+                 max_iter: int = 600) -> np.ndarray:
         """Distance to the first terrain hit along each ray (inf for sky). d: (N, 3) unit."""
+        if t_max is None:  # far enough to cross the whole map diagonally
+            t_max = 1.5 * self.heights.shape[0] * self.cell
         n = d.shape[0]
         t = np.full(n, 2.0)
         result = np.full(n, np.inf)

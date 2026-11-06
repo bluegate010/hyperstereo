@@ -275,6 +275,7 @@ def main(argv=None):
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--rtk", action="store_true", help="RTK-grade GPS (2 cm) instead of ~1 m")
     ap.add_argument("--wind", type=float, default=None, help="mean wind speed m/s (from the west)")
+    ap.add_argument("--baseline-max", type=float, default=None, help="override the maximum baseline, m")
     ap.add_argument("--sitl", action="store_true", help="fly two ArduPilot SITL instances instead of the built-in sim")
     a = ap.parse_args(argv)
 
@@ -283,6 +284,8 @@ def main(argv=None):
     cfg.camera.width, cfg.camera.height, cfg.camera.hfov_deg = a.width, a.height, a.hfov
     if a.rtk:
         cfg.sim.gps_sigma_m = 0.02
+    if a.baseline_max is not None:
+        cfg.controller.baseline_max_m = a.baseline_max
     if a.wind is not None:
         cfg.sim.wind_mean = (0.0, a.wind, 0.0)
     scn = Scenario.load(a.scenario)

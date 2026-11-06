@@ -60,14 +60,17 @@ def main(argv=None):
     ap.add_argument("--height", type=int, default=540)
     ap.add_argument("--hold", type=float, default=6.0, help="seconds per setting in the ladder video")
     ap.add_argument("--no-mask", action="store_true")
+    ap.add_argument("--cell", type=float, default=16.0,
+                    help="terrain cell size, m (32 doubles the map to 32 km for very long baselines)")
+    ap.add_argument("--seed", type=int, default=5)
     a = ap.parse_args(argv)
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     comfort = ComfortConfig()
-    T = Terrain.generate()
+    T = Terrain.generate(cell=a.cell)
     dem = make_dem_depth_fn(T)
-    rng = np.random.default_rng(5)
+    rng = np.random.default_rng(a.seed)
     rows, stills = [], []
     for B, hfov, agl in itertools.product(*(map(float, s.split(",")) for s in (a.baselines, a.hfovs, a.agls))):
         img, res, conv, cm = render_case(T, dem, B, hfov, agl, a.yaw, a.width, a.height, comfort, rng,
