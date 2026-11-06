@@ -8,9 +8,10 @@ takeoff/land and failsafe behaviour, plus SITL's own wind/turbulence model. Gimb
 not simulated by SITL here; the camera attitude comes from the same GimbalModel the
 built-in sim uses, driven by the vehicle's reported body rates.
 
-NOTE: written against pymavlink + ArduCopter 4.5 but not yet exercised against a live
-SITL (it couldn't be built in the environment this was developed in). Expect to
-debug the first run.
+Tested against ArduCopter 4.5 SITL (two instances, --speedup 1 and 3): full tour and
+fault-injection scenarios fly end to end, including takeoff, arc rotations, HOLD/resume
+and LAND. SITL's GPS noise is white noise only (no slow drift), so baseline errors
+come out smaller than the built-in sim's.
 """
 from __future__ import annotations
 
@@ -41,6 +42,7 @@ class _Veh:
     att: np.ndarray | None = None          # roll, pitch, yaw (deg)
     rates: np.ndarray | None = None        # yaw, pitch, roll rates (deg/s)
     boot_ms: int = 0
+    lat_ok: bool = False
 
 
 class SitlBackend:
@@ -59,16 +61,26 @@ class SitlBackend:
             self.vehicles.append(_Veh(c, GimbalModel(cfg, rng, rng.normal(0, cfg.compass_bias_sigma_deg)),
                                       np.array(launch, float)))
         for v in self.vehicles:
-            for msg_id in (33, 30, 164):  # GLOBAL_POSITION_INT, ATTITUDE, SIMSTATE
-                self._cmd(v, mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, msg_id, 50_000)
+            # GLOBAL_POSITION_INT, ATTITUDE, SIMSTATE at 50 Hz; ATTITUDE also paces the loop.
+            for msg_id in (33, 30, 164):
+                self._cmd(v, mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, msg_id, 20_000)
             wx, wy = cfg.wind_mean[0], cfg.wind_mean[1]
             spd = math.hypot(wx, wy)
             # SIM_WIND_DIR is the direction the wind blows *from*.
             self._param(v, "SIM_WIND_SPD", spd)
             self._param(v, "SIM_WIND_DIR", (math.degrees(math.atan2(-wy, -wx))) % 360.0)
             self._param(v, "SIM_WIND_TURB", cfg.gust_sigma_mps)
+            # SITL's GPS is perfect by default. This adds white noise (the EKF filters it);
+            # SITL has no slow-drift model like the built-in sim's.
+            self._param(v, "SIM_GPS_NOISE", cfg.gps_sigma_m)
         self.t = 0.0
-        self._pump(0.5)
+        self._clock_ms = None
+        # Wait for GPS fix + EKF origin: GLOBAL_POSITION_INT reports lat=0 until then.
+        deadline = time.time() + timeout_s * 2
+        while any(v.pos is None or v.lat_ok is False for v in self.vehicles):
+            if time.time() > deadline:
+                raise RuntimeError("timed out waiting for SITL position fix")
+            self._pump(0.2)
 
     # ---------------------------------------------------------------- MAVLink helpers
     def _cmd(self, v, cmd, *params):
@@ -104,12 +116,15 @@ class SitlBackend:
     def _handle(self, v, m):
         t = m.get_type()
         if t == "GLOBAL_POSITION_INT":
+            v.lat_ok = m.lat != 0
+            if not v.lat_ok:
+                return
             v.pos = self._neu(m.lat, m.lon, m.relative_alt, v.launch[2])
             v.vel = np.array([m.vx, m.vy, -m.vz]) / 100.0
-            v.boot_ms = m.time_boot_ms
         elif t == "ATTITUDE":
             v.att = np.degrees([m.roll, m.pitch, m.yaw])
             v.rates = np.degrees([m.yawspeed, m.pitchspeed, m.rollspeed])
+            v.boot_ms = max(v.boot_ms, m.time_boot_ms)
         elif t == "SIMSTATE":
             # SIMSTATE altitude is AMSL; keep the EKF's relative altitude for z.
             z = v.pos[2] if v.pos is not None else 0.0
@@ -166,10 +181,14 @@ class SitlBackend:
                 math.radians(sp.yaw_deg), 0)
             v.gimbal.step(dt, sp.gimbal_yaw_deg, sp.gimbal_pitch_deg,
                           v.rates if v.rates is not None else np.zeros(3))
-        # Pace the controller to SITL's clock (works with --speedup).
-        start = self.vehicles[0].boot_ms
+        # Pace the controller to SITL's clock (works with --speedup). Track a target
+        # time rather than "dt since the last message", so message jitter doesn't accumulate.
+        v0 = self.vehicles[0]
+        if self._clock_ms is None:
+            self._clock_ms = v0.boot_ms
+        self._clock_ms += dt * 1000.0
         deadline = time.time() + 2.0
-        while self.vehicles[0].boot_ms - start < dt * 1000 and time.time() < deadline:
+        while v0.boot_ms < self._clock_ms - 10 and time.time() < deadline:
             self._pump(0.001)
         self.t += dt
 

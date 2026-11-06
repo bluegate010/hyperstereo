@@ -13,7 +13,7 @@ stereo pipeline, and comfort metrics scored against ground truth.
 | `hyperstereo/controller.py` | Virtual-vehicle formation controller and the STEREO / FADING_OUT / TRANSIT / SETTLING / FADING_IN state machine, plus assembly, recovery and HOLD failsafe |
 | `hyperstereo/geometry.py` | Frames (NEU, compass headings) and formation slot math |
 | `hyperstereo/sim.py` | Multirotor + gimbal sim: wind and gusts, GPS drift, compass bias, gimbal bias, lag and jitter |
-| `hyperstereo/sitl.py` | Same interface, driving two ArduPilot SITL instances over MAVLink (**untested**, see below) |
+| `hyperstereo/sitl.py` | Same interface, driving two ArduPilot SITL instances over MAVLink |
 | `hyperstereo/terrain.py` | Procedural 16 km landscape and CPU raymarcher (images + true depth) |
 | `hyperstereo/stereo.py` | Feature rectifier, DEM-based convergence, ground mask, SBS composition, ground-truth comfort metrics |
 | `hyperstereo/runner.py` | Runs a scenario: flight, telemetry, optional SBS video, scoring |
@@ -57,18 +57,22 @@ Outputs go to `out/<scenario>/`: `telemetry.csv` (50 Hz), `events.log` (mode cha
 ### Against ArduPilot SITL
 
 ```bash
-cd ~/ardupilot && ./waf configure --board sitl && ./waf copter
+cd ~/ardupilot && pip install dronecan empy==3.3.4 future pexpect && ./waf configure --board sitl && ./waf copter
 ```
 
+The optional argument is the SITL speedup; the runner paces itself to SITL's clock.
+
 ```bash
-ARDUPILOT=~/ardupilot scripts/start_sitl.sh
+ARDUPILOT=~/ardupilot scripts/start_sitl.sh 3
 ```
 
 ```bash
 python -m hyperstereo.runner scenarios/tour.json --sitl
 ```
 
-`sitl.py` hasn't been run against a live SITL yet, so expect to debug the first run.
+Add `--render --fps 1` to render and score stereo from the SITL flight. SITL's
+wind (`SIM_WIND_*`) and GPS noise (`SIM_GPS_NOISE`) are set from the config.
+Gimbals are modelled by `GimbalModel`, driven by ArduCopter's reported body rates.
 
 ## Scenario format
 
@@ -112,7 +116,14 @@ larger becomes a fade-out / transit / settle maneuver.
    The sim caught a bug where resuming after a fault mid-rotation left the gimbals at
    the new heading and the drones on the old baseline, giving 1.9° of raw vertical
    disparity. That's now a settle criterion and a regression test.
-6. **Non-RTK GPS is fine for image quality** (baseline error about 1.5 m RMS, about 3%
+6. **Gimbals must not start turning until the view is fully 2D.** The ArduPilot run
+   caught the gimbals slewing to the new heading during the fade-out, which put a
+   misaligned stereo pair in front of the pilot for about half a second. Fixed, with a
+   regression test.
+7. **Real ArduCopter is slower than the built-in sim.** Assembly takes 65–95 s instead of
+   about 47 s (the climb is limited to about 2.5 m/s), and settling after a 180°
+   rotation at B = 100 m takes longer: a 34 s gap instead of 24 s.
+8. **Non-RTK GPS is fine for image quality** (baseline error about 1.5 m RMS, about 3%
    at B = 50 m), but launch and recovery with the drones 10 m apart left only 8 m of
    separation. RTK still matters for the close-quarters phases.
 
@@ -126,7 +137,9 @@ larger becomes a fade-out / transit / settle maneuver.
 - [ ] **Headset trials**: watch `out/sweep/ladder.mp4` and the scenario videos in an
       SBS-capable headset and fill in `comfort_rating` in `out/sweep/results.csv`, then
       tune `ComfortConfig` to match
-- [ ] Validate the controller against two ArduPilot SITL instances (`--sitl`)
+- [x] Validate against two ArduPilot SITL instances (`--sitl`). Tour: 4 maneuvers,
+      no holds, landed; stereo: 0 frames without lock, worst vertical error 0.10°, worst
+      divergence 0.03°. Fault: HOLD, resume at the interrupted heading, stereo, landed.
 - [ ] Real-time interactive viewer (fly with a joystick in the headset). The CPU
       raymarcher is offline-only; a WebGL or game-engine front end would reuse
       `controller.py` unchanged.

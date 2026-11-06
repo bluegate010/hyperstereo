@@ -300,7 +300,10 @@ class FormationController:
 
     def _setpoints(self, states) -> tuple[Setpoint, Setpoint]:
         f = self.formation
-        final_heading = (f.heading_deg + self.rotate_remaining) % 360.0
+        # Gimbals lead to the final heading only once the view is fully 2D. Slewing them during
+        # FADING_OUT would show the pilot a partly faded, misaligned stereo pair.
+        lead = self.mode not in (Mode.FADING_OUT, Mode.FADING_IN, Mode.STEREO)
+        final_heading = (f.heading_deg + (self.rotate_remaining if lead else 0.0)) % 360.0
         pitch = self.view_pitch
         if self.mode == Mode.HOLD and self.hold_pos is not None:
             pl, pr = self.hold_pos

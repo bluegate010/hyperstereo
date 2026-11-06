@@ -1,0 +1,11 @@
+{
+  "name": "sitl_short",
+  "heading_deg": 0,
+  "baseline_m": 50,
+  "duration_s": 240,
+  "events": [
+    {"t": 1,   "cmd": {"start": true}},
+    {"t": 80,  "cmd": {"rotate_deg": 90}},
+    {"t": 120, "cmd": {"recover": true}}
+  ]
+}

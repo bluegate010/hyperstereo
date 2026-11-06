@@ -141,3 +141,13 @@ def test_simulated_tour_with_wind_and_gps_noise(seed):
     assert len(s["stereo_gaps_s"]) == 4
     assert s["min_separation_airborne_m"] > cfg.controller.min_separation_m
     assert s["stereo_baseline_err_max_m"] < 5.0
+
+
+def test_gimbals_do_not_slew_until_fade_out_completes():
+    ctrl = make_ctrl()
+    run_ideal(ctrl, lambda t: PilotInput(start=t < 0.05), 10.0)
+    log = run_ideal(ctrl, lambda t: PilotInput(rotate_deg=90.0 if t < 10.01 else None), 3.0, t0=10.0)
+    fading = [o for _, o in log if o.mode == Mode.FADING_OUT]
+    assert fading and all(o.left.gimbal_yaw_deg == pytest.approx(0.0) for o in fading)
+    transit = [o for _, o in log if o.mode == Mode.TRANSIT]
+    assert transit and transit[0].left.gimbal_yaw_deg == pytest.approx(90.0)
