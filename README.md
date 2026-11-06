@@ -99,7 +99,8 @@ Press `?` for the control map. Add `--sitl` to fly two ArduPilot SITL instances
 | Start / Back | Enter / Backspace | launch & assemble / recover & land |
 | X | H | resume after HOLD |
 | B | T | toggle rectification (A/B the raw misaligned pair) |
-| | M / V / U | ground mask / view SBS·anaglyph·2D / HUD |
+| | M / V / U | ground mask / cycle view (SBS · anaglyph · 2D · cross-eyed) / HUD |
+| | X | cross-eyed view on/off |
 | | G / N | inject right-drone fault / new flight |
 
 How it works: the browser renders each eye from the drone's *true* camera pose,
@@ -107,8 +108,11 @@ gimbal errors included. Rectification renders the right eye with the left
 camera's orientation plus about 0.03° of residual error, which matches what the
 feature + DEM pipeline achieved offline. That's mathematically the same as the
 rotation-only homography. Snapshots are interpolated (with a slerp for orientation)
-50 ms in the past, so motion stays smooth on 60–90 Hz displays. Use the anaglyph
-view with red/cyan glasses to test without a headset. Append `?lod=2` to the URL
+50 ms in the past, so motion stays smooth on 60–90 Hz displays. To test without a headset, use the anaglyph
+view with red/cyan glasses, or the **cross-eyed** view (`X`, or `?view=cross`). The cross-eyed
+view is side by side with the halves swapped, so you can free-view it by crossing your eyes
+until the two images merge into a third in the middle. If they won't fuse, make the
+window narrower or sit further back. Append `?lod=2` to the URL
 to halve the terrain mesh resolution on weak GPUs.
 
 Limitations: the browser path doesn't run the real feature rectifier, which needs

@@ -5,10 +5,13 @@ import * as THREE from '/static/vendor/three.module.min.js';
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
 const status = $('status');
-const VIEWS = ['sbs', 'anaglyph', 'mono'];
+// cross = side by side with halves swapped (right camera on the left) for cross-eyed free viewing
+const VIEWS = ['sbs', 'anaglyph', 'mono', 'cross'];
+const isSplit = () => view === 'sbs' || view === 'cross';
 let view = 'sbs';
 try { view = localStorage.getItem('hs.view') || view; } catch (e) { /* storage unavailable */ }
 if (params.get('view')) view = params.get('view');
+if (!VIEWS.includes(view)) view = 'sbs';
 
 // NEU (north, east, up; left-handed) -> three.js (x=east, y=up, z=-north; right-handed)
 const toThree = (n, e, u) => new THREE.Vector3(e, u, -n);
@@ -143,7 +146,8 @@ const compMat = new THREE.ShaderMaterial({
         vec3 lum = vec3(0.299, 0.587, 0.114);
         float l = dot(eye(0, vUv), lum), r = dot(eye(1, vUv), lum);
         c = vec3(l, r, r);
-      } else c = eye(0, vUv);
+      } else if (mode == 3) c = vUv.x < 0.5 ? eye(1, vec2(vUv.x * 2.0, vUv.y)) : eye(0, vec2(vUv.x * 2.0 - 1.0, vUv.y));
+      else c = eye(0, vUv);
       gl_FragColor = vec4(c, 1.0);
     }`,
 });
@@ -158,7 +162,7 @@ function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
   const pr = renderer.getPixelRatio();
-  eyeW = Math.max(1, Math.round((view === 'sbs' ? w / 2 : w) * pr));
+  eyeW = Math.max(1, Math.round((isSplit() ? w / 2 : w) * pr));
   eyeH = Math.max(1, Math.round(h * pr));
   for (const rt of rts) rt.setSize(eyeW, eyeH);
 }
@@ -241,13 +245,16 @@ window.addEventListener('keydown', (e) => {
   else if (e.code === 'KeyM') send({ type: 'toggle', flag: 'mask' });
   else if (e.code === 'KeyG') send({ type: 'fault', vehicle: 'R' });
   else if (e.code === 'KeyN') send({ type: 'reset' });
-  else if (e.code === 'KeyV') {
-    view = VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length];
-    try { localStorage.setItem('hs.view', view); } catch (err) { /* ignore */ }
-    resize();
-  } else if (e.code === 'KeyU') { hudOn = !hudOn; if (!hudOn) { hudL.innerHTML = ''; hudR.innerHTML = ''; } }
+  else if (e.code === 'KeyV') setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]);
+  else if (e.code === 'KeyX') setView(view === 'cross' ? 'sbs' : 'cross'); else if (e.code === 'KeyU') { hudOn = !hudOn; if (!hudOn) { hudL.innerHTML = ''; hudR.innerHTML = ''; } }
   else if (e.key === '?') $('help').classList.toggle('show');
 });
+function setView(v) {
+  view = v;
+  try { localStorage.setItem('hs.view', view); } catch (err) { /* ignore */ }
+  resize();
+  lastHud = 0;
+}
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
 $('fs').addEventListener('click', () => document.documentElement.requestFullscreen?.());
@@ -292,15 +299,18 @@ function hud(s, padOn) {
 B ${s.baseline.toFixed(0)} m (→${s.baseline_target.toFixed(0)})  sep ${s.sep.toFixed(1)} m
 hdg ${s.heading.toFixed(0)}°  AGL ${s.agl.toFixed(0)} m  pitch ${s.view_pitch.toFixed(1)}°
 scale ×${(s.baseline / 0.063).toFixed(0)}  ${health}
-rect ${flags.rectify ? 'ON' : 'OFF'}  mask ${flags.mask ? 'ON' : 'OFF'}  ${padOn ? 'pad' : 'keys'}  ${s.sitl ? 'SITL' : 'sim'}
+rect ${flags.rectify ? 'ON' : 'OFF'}  mask ${flags.mask ? 'ON' : 'OFF'}  ${view === 'cross' ? 'CROSS-EYED' : view}  ${padOn ? 'pad' : 'keys'}  ${s.sitl ? 'SITL' : 'sim'}
 ${s.events.slice(-3).join('\n')}
 press ? for controls`;
   const off = 6;  // px of crossed disparity per eye so the HUD floats in front of the scene
   hudL.innerHTML = html;
-  if (view === 'sbs') {
+  if (isSplit()) {
+    // Crossed disparity: the left-eye copy sits right of the right-eye copy. In cross view
+    // the left half is seen by the right eye, so the offsets swap.
+    const o = view === 'cross' ? -off : off;
     hudR.style.display = 'block'; hudR.innerHTML = html;
-    hudL.style.left = `${12 + off}px`;
-    hudR.style.left = `${window.innerWidth / 2 + 12 - off}px`;
+    hudL.style.left = `${12 + o}px`;
+    hudR.style.left = `${window.innerWidth / 2 + 12 - o}px`;
   } else { hudR.style.display = 'none'; hudL.style.left = '12px'; }
 }
 
